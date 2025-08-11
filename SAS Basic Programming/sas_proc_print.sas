@@ -150,6 +150,3 @@ title;
 footnote;
 ods html close;
 
-
-proc print data=sashelp.air(obs=10);
-run;
