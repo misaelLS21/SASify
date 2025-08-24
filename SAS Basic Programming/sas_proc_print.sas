@@ -40,29 +40,35 @@ Best Practices:
 ---------------------------------------------------------------------------------------*/
 
 
+/* 1) Basic Syntax (baseline) */
 *Basic Syntax;
 proc print data=sashelp.cars;
 run;
 
+/* 2) Select Specific Variables (clean column set) */
 *Select Specific Variables;
 proc print data=sashelp.cars;
     var Make Model Type MSRP;
 run;
 
+/* 3) Limit number of observations (quick peek) */
 *Limit number of observations;
 proc print data=sashelp.cars (obs=10);
 run;
 
-*Add observation numbers;
+/* 4) Remove automatic observation numbers (cleaner look) */
+*Add/Remove observation numbers;
 *'noobs' removes the automatic observation number column;
-proc print data=sashelp.cars (obs=10);
+proc print data=sashelp.cars (obs=10) noobs;
 run;
 
-*Fiter Rows;
+/* 5) Filter Rows (focus only what matters) */
+*Filter Rows;
 proc print data=sashelp.cars;
     where Type = "SUV";
 run;
 
+/* 6) Order by Variable (needs PROC SORT) */
 *Order by Variable;
 proc sort data=sashelp.cars out=sorted_cars;
     by MSRP;
@@ -72,81 +78,163 @@ proc print data=sorted_cars;
     by MSRP;
 run;
 
-
-/* Advance Options 
-   Advance Commands with PROC PRINT
-*/ 
-
-* Group by variables with BY statement;
-proc sort data=sashelp.cars out=sorted_cars;
+/* 7) Grouping with BY (nice sectioned reports) */
+*Group by variables with BY statement;
+proc sort data=sashelp.cars out=sorted_cars_type;
     by Type;
 run;
 
-proc print data=sorted_cars;
+proc print data=sorted_cars_type;
     by Type;
 run;
 
-*Add title an foodnote;
-title "List of Cars by Make and Model by SASify";
+/* 8) Titles and Footnotes (brand your report) */
+*Add title and footnote;
+title "List of Cars by Make and Model — SASify";
 footnote "Data Source: SASHELP.CARS";
 
 proc print data=sashelp.cars;
     var Make Model Type MSRP;
 run;
 
-title;
-footnote;
+title; footnote;
 
-
+/* 9) Labels (human-friendly headings) */
 *Change Labels;
 proc print data=sashelp.cars label;
     label MSRP = "Manufacturer's Suggested Retail Price";
     var Make Model Type MSRP;
 run;
 
-* Split Long Labels into Multiple Lines;
+/* 10) Split Long Labels into Multiple Lines (space management) */
+*Split Long Labels into Multiple Lines;
 proc print data=sashelp.cars label split="*";
     label MSRP = "Manufacturer's*Suggested Retail Price";
     var Make Model Type MSRP;
 run;
 
+/* 11) Formats (currency, decimals, dates) */
 *Apply Formats;
-proc print data=sashelp.cars;
+proc print data=sashelp.cars label;
     format MSRP dollar10. MPG_City MPG_Highway 5.1;
+    label MPG_City = "City MPG" MPG_Highway = "Highway MPG";
     var Make Model Type MSRP MPG_City MPG_Highway;
 run;
 
+/* 12) ID column (row header look) */
+*Use ID to create a row header;
+proc print data=sashelp.cars label noobs;
+    id Make;
+    var Model Type MSRP;
+    label MSRP = "MSRP";
+run;
 
+/* 13) SUM and BY-group totals (quick totals) */
+*Totals at bottom + by-group totals;
+proc sort data=sashelp.cars out=sorted_price;
+    by Type;
+run;
+
+proc print data=sorted_price label noobs;
+    by Type;
+    var MSRP MPG_City MPG_Highway;
+    sum MSRP;
+    label MSRP="Total MSRP (by group)";
+run;
+
+/* 14) PAGEBY for paginated sections (great for PDF) */
+*Page per Type;
+options nobyline; /* hides BY line for a cleaner header */
+title "Cars Report — One Page per Type";
+proc sort data=sashelp.cars out=sorted_page;
+    by Type;
+run;
+
+proc print data=sorted_page label noobs;
+    pageby Type;
+    var Make Model Type MSRP;
+run;
+title;
+
+/* 15) ODS HTML/PDF/RTF styles (quick theming) */
 *Style with ODS (HTML, PDF, RTF output);
 ods html file="cars.html" style=statistical;
-proc print data=sashelp.cars;
+proc print data=sashelp.cars noobs label;
     var Make Model MSRP;
+    label MSRP="MSRP";
 run;
 ods html close;
 
+ods pdf file="cars.pdf" style=journal;
+proc print data=sashelp.cars label noobs;
+    var Make Model Type MSRP;
+run;
+ods pdf close;
 
-/* Full example with all the elements */ 
+/* 16) ODS EXCEL (nice for business users) */
+*Export pretty table to Excel (XLSX);
+ods excel file="cars.xlsx" options(sheet_name="Report") style=pearl;
+proc print data=sashelp.cars label noobs;
+    var Make Model Type MSRP;
+run;
+ods excel close;
+
+/* 17) ODS style overrides at column level (headers/data) */
+*Inline style tweaks (header/data) via ODS style overrides;
+proc print data=sashelp.cars label noobs;
+    var Make Model Type MSRP /
+        style(header)=[fontweight=bold background=lightgray]
+        style(data)=[cellwidth=1.2in];
+    label MSRP = "MSRP";
+    format MSRP dollar10.;
+run;
+
+/* 18) Highlighting with STYLE= (simple emphasis) */
+*Emphasize expensive cars with a separate pass (simple demo);
+proc sort data=sashelp.cars out=sorted_exp;
+    by descending MSRP;
+run;
+
+proc print data=sorted_exp (obs=15) label noobs;
+    var Make Model Type MSRP /
+        style(header)=[fontweight=bold background=lightgray]
+        style(data)=[fontweight=bold];
+    label MSRP="Top MSRP";
+    format MSRP dollar12.;
+run;
+
+/* 19) Column width + center alignment (clean fit) */
+*Adjust width and alignment;
+proc print data=sashelp.cars label noobs;
+    var Make Model Type MSRP /
+        style(header)=[just=center]
+        style(data)=[just=center cellwidth=1.3in];
+    format MSRP dollar10.;
+run;
+
+/* 20) Full example (many goodies in one) */
+*Full example with all the elements;
 ods html file="cars_report.html" style=journal;
 
-proc sort data=sashelp.cars out=sorted_cars;
+proc sort data=sashelp.cars out=sorted_cars_full;
     by Type MSRP;
 run;
 
 title "Detailed Cars Report by Type";
 footnote "Generated on %sysfunc(date(), worddate.)";
 
-proc print data=sorted_cars label split="*" noobs;
+proc print data=sorted_cars_full label split="*" noobs;
     id Make;
     by Type;
     where MSRP > 30000;
-    var Make Model Type MSRP MPG_City MPG_Highway;
+    var Make Model Type MSRP MPG_City MPG_Highway /
+        style(header)=[fontweight=bold background=lightgray]
+        style(data)=[cellwidth=1.1in];
     label MSRP = "Manufacturer's*Suggested Retail Price"
           MPG_City = "City MPG"
           MPG_Highway = "Highway MPG";
     format MSRP dollar10. MPG_City MPG_Highway 5.1;
 run;
 
-title;
-footnote;
+title; footnote;
 ods html close;
-
